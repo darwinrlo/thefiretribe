@@ -1,13 +1,21 @@
+import json
+import os
 from flask import *
-
-full_links = {
-    'sowmya': 'https://coda.io/d/Airlift-Sowmya-Darwin_dQn7W1Has1v/Todos_sutqD#_lu9QK'
-}
+from google.oauth2.service_account import Credentials
+import gspread
 
 app = Flask(__name__)
 
 @app.route("/<shorthand>")
 def redirect_shorthand(shorthand):
-    if shorthand not in full_links:
+    json_acc_info = json.loads(os.environ['GOOGLE_SHEETS_CREDENTIALS'])
+    scopes = ['https://www.googleapis.com/auth/spreadsheets', 'https://www.googleapis.com/auth/drive']
+    credentials = Credentials.from_service_account_info(json_acc_info, scopes=scopes)
+    client = gspread.authorize(credentials)
+    sheet_data = client.open('Link Shorthands').worksheet('Mappings').get_all_values()
+    mappings = {row[0]: row[1] for row in sheet_data}
+
+    if shorthand not in mappings:
         abort(404)
-    return redirect(full_links[shorthand])
+
+    return redirect(mappings[shorthand])
